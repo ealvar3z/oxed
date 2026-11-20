@@ -1,0 +1,46 @@
+oxed
+====
+
+An ed-first terminal editor written in OxCaml.
+
+DESCRIPTION
+
+    oxed combines traditional ed commands with Unicode editing,
+    keyboard and mouse interaction, Tree-sitter, and LSP.
+
+    All editing interfaces share a common transaction engine.
+
+IMPLEMENTATION
+
+    OxCaml       Language and runtime
+    Zed          Text buffers and editing
+    Lambda-term  Terminal interface
+    Lwt          Asynchronous operations
+    Tree-sitter  Syntax analysis (planned)
+    LSP          Language services (planned)
+
+BUILD
+
+    eval "$(opam env --switch=oxcaml --set-switch)"
+    dune build
+
+TEST
+
+    dune exec ./test/terminal_smoke.exe
+    dune exec ./test/terminal_smoke.exe -- fail
+
+STATUS
+
+    Experimental. Application skeleton compiles.
+    Terminal lifecycle tests pass.
+    Editing and language services remain unfinished.
+
+DEVELOPMENT
+
+    Compiler-driven, interface-first development.
+    Each implementation follows a verified diagnostic.
+
+DOCUMENTATION
+
+    SPEC       Software requirements
+    CHANGELOG  Development history and verification
