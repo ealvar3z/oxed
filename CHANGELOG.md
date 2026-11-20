@@ -583,3 +583,294 @@ File "main.ml", line 5, characters 17-20:
                      ^^^
 Error: Unbound module App
 ```
+
+## Fri Nov 20 00:06:57 EST 2026
+```
+; dune build
+File "dune", lines 1-3, characters 0-80:
+1 | (executable
+2 |   (name main)
+3 |   (libraries core core_unix zed lambda-term lwt.unix))
+Error: Some modules don't have an implementation.
+You need to add the following field to this stanza:
+
+  (modules_without_implementation app)
+```
+
+## Fri Nov 20 00:13:12 EST 2026
+```
+; dune build
+File "app.mli", line 5, characters 13-21:
+5 |     terminal:Terminal.t ->
+                 ^^^^^^^^
+Error: Unbound module Terminal
+```
+
+## 2026-11-20 — 007. Asynchronous language services
+
+### Observation
+
+    Error: This expression has type Language.t
+           but an expression was expected of type 'a Lwt.t
+
+### Cause
+
+    Language.start returned a concrete value.
+    The let* operator expects an Lwt computation.
+
+### Resolution
+
+    Changed Language.start:
+
+    From:
+        Editor.t -> t
+
+    To:
+        Editor.t -> t Lwt.t
+
+    Language.stop:
+        t -> unit Lwt.t
+
+### Principle
+
+    A value and a computation producing that value
+    are different types.
+
+    Lwt.bind sequences asynchronous computations.
+
+### Verification
+
+    dune build
+
+### Result
+
+    Pending compilation.
+
+## 2026-11-20 — 008. Partial function application
+
+### Observation
+
+    This expression has type
+      (unit -> unit Lwt.t) -> unit Lwt.t
+
+    but an expression was expected of type
+      'a Lwt.t
+
+### Cause
+
+    Lwt.finalize was partially applied.
+
+### Resolution
+
+    Restore both cleanup functions:
+
+        Language.stop languages
+        Terminal.close terminal
+
+### Principle
+
+    OCaml functions are curried.
+
+    Applying fewer arguments than required
+    produces another function.
+
+    A function returning a computation is
+    not itself that computation.
+
+### Verification
+
+    dune build
+
+### Result
+
+    Pending compilation.
+
+## 2026-11-20 — 009. Language service lifecycle
+
+### Observation
+
+    Error: Unbound value Language.stop
+
+### Cause
+
+    Language.stop is referenced by main.ml,
+    but is absent from the exposed interface.
+
+### Resolution
+
+    Declare in language.mli:
+
+        val stop : t -> unit Lwt.t
+
+### Principle
+
+    Resource acquisition and release should
+    have explicit lifecycle contracts.
+
+    Lwt.finalize guarantees that the cleanup
+    callback runs when the protected computation
+    completes or raises an exception.
+
+### Verification
+
+    dune build
+
+### Result
+
+    Pending compilation.
+
+## 2026-11-20 — 010. From interfaces to implementations
+
+### Observation
+
+    Error: No implementations provided for:
+        Syntax Terminal Workspace Language
+        Ed App Editor
+
+### Cause
+
+    The interfaces type-check, but no native
+    implementations exist for these modules.
+
+### Resolution
+
+    Created workspace.ml.
+
+    Declared an abstract type t.
+
+    Introduced a temporary failing implementation
+    for Workspace.open_files.
+
+    Removed workspace from
+    modules_without_implementation.
+
+### Principle
+
+    An interface establishes a contract.
+    An implementation satisfies that contract.
+    A linker requires executable definitions.
+
+### Verification
+
+    dune build
+
+### Result
+
+    Pending compilation.
+
+## 2026-11-20 — 012. Application coordinator
+
+### Goal
+
+Complete the implementation skeleton and link
+our first OxCaml executable.
+
+### Changes
+
+Created app.ml.
+
+Defined:
+    event
+    t
+    create
+    next_event
+    dispatch
+    render
+    running
+
+Implemented:
+    App.create
+    App.running
+
+Deferred:
+    App.next_event
+    App.dispatch
+    App.render
+
+Removed modules_without_implementation
+from dune.
+
+### Verification
+
+    dune build
+
+### Result
+
+    Pending compilation.
+
+## 2026-11-20 — 013. Unused variant constructor
+
+### Observation
+
+    Error (warning 37 [unused-constructor]):
+    unused constructor Pending.
+
+### Cause
+
+    Pending was declared but never used.
+    Dune treats this warning as an error.
+
+### Resolution
+
+    Replaced:
+        type event = Pending
+
+    With:
+        type event = unit
+
+### Principle
+
+    OCaml distinguishes product types (records),
+    sum types (variants), and the unit type.
+
+    Abstract signatures can hide the concrete
+    representation chosen by an implementation.
+
+### Verification
+
+    dune build
+
+### Result
+
+    Pending compilation.
+
+## 2026-11-20 — 014. Structural bootstrap
+
+### Accomplished
+
+- Established the OxCaml development environment.
+- Diagnosed the macOS SDK compatibility problem.
+- Created the Dune project.
+- Defined the application lifecycle in main.ml.
+- Established seven module interfaces.
+- Introduced intentionally incomplete implementations.
+- Constructed the application state and event loop contracts.
+
+### Architecture
+
+    Main
+      App
+        Terminal
+        Workspace
+        Editor
+        Ed
+        Syntax
+        Language
+
+### Verification
+
+    dune build
+
+### Result
+
+    Record actual compiler result here.
+
+### Commit
+
+    bootstrap: establish oxed application skeleton
+
+### Next milestone
+
+    Implement Terminal using Lambda-term.
+    Replace Terminal.open_ and Terminal.close
+    with working resource management.

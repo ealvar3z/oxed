@@ -12,7 +12,7 @@ let run files =
     let* terminal = Terminal.open_ () in
     Lwt.finalize
         (fun () ->
-            let* workspace = Workspace.open_files file in
+            let* workspace = Workspace.open_files files in
             let editor = Editor.create workspace in
             let commands = Ed.create editor in
             let syntax = Syntax.create editor in
@@ -29,7 +29,8 @@ let run files =
                     in
                     let* () = App.render app in
                     loop app)
-                (fun () -> Terminal.close terminal))
+                (fun () -> Language.stop languages))
+        (fun () -> Terminal.close terminal)
 
 let () =
     let files =
