@@ -1,0 +1,97 @@
+oxed - SOFTWARE REQUIREMENTS SPECIFICATION
+Document: OXED-SRS-001
+Revision: 0.2-draft
+Status: DRAFT
+Date: 2026-11-20
+
+1. SCOPE
+
+1.1 oxed is an ed-first terminal editor written in OxCaml.
+1.2 Keyboard, mouse, ed, and LSP edits share one transaction engine.
+1.3 Visual features augment, rather than replace, command composition.
+
+2. CONVENTIONS
+
+2.1 MUST, SHOULD, and MAY follow RFC 2119 and RFC 8174.
+2.2 Each REQ identifier is unique and remains stable across revisions.
+2.3 Every MUST requirement requires verification evidence.
+
+3. ARCHITECTURE
+
+3.1 Main       Application lifecycle and resource cleanup
+3.2 App        Event routing, dispatch, and rendering
+3.3 Terminal   Lambda-term input, display, and mouse
+3.4 Workspace  Files, buffers, and active document
+3.5 Editor     Zed-backed text, cursors, selections, and undo
+3.6 Ed         Addressing and command interpretation
+3.7 Syntax     Tree-sitter parsing and syntax overlays
+3.8 Language   LSP processes and language services
+
+4. FUNCTIONAL REQUIREMENTS
+
+REQ-001 Editor MUST own authoritative text and cursor state.
+REQ-002 All editing inputs MUST use a common transaction pathway.
+REQ-003 Ed MUST support ., $, numbers, marks, searches, and ranges.
+REQ-004 Ed MUST support p, a, i, c, d, s, g, w, q, and u.
+REQ-005 An @ selection address MAY extend traditional ed syntax.
+REQ-006 Workspace MUST support opening, editing, and saving files.
+REQ-007 Terminal MUST support keyboard, mouse, and resizing.
+REQ-008 Terminal MUST restore its state after normal termination
+        and recoverable failures.
+REQ-009 Syntax MUST maintain an incremental, derived parse tree.
+REQ-010 Language MUST support versioned LSP document state.
+REQ-011 Stale LSP results MUST NOT overwrite newer text state.
+REQ-012 Position conversion MUST handle Unicode scalar positions,
+        UTF-8 byte offsets, and LSP UTF-16 offsets.
+REQ-013 File operations MUST preserve buffer integrity on failure.
+REQ-014 Release builds MUST NOT contain reachable TODO stubs.
+
+5. IMPLEMENTATION CONSTRAINTS
+
+5.1 OxCaml with Base, Core, and Core_unix.
+5.2 Zed provides Unicode editing and rope infrastructure.
+5.3 Lambda-term provides terminal interaction.
+5.4 Lwt coordinates asynchronous operations.
+5.5 Tree-sitter provides incremental syntax analysis.
+5.6 LSP protocol types and process transport remain separate.
+5.7 Zed refers to the OCaml library, not the Rust Zed editor.
+
+6. VERIFICATION
+
+VER-001 Native compilation and interface compatibility.
+VER-002 Terminal acquisition, restoration, and repeated cleanup.
+VER-003 File open, edit, save, and reopen round trips.
+VER-004 Ed command, address, and undo regression tests.
+VER-005 Keyboard, mouse, scrolling, and resize tests.
+VER-006 Incremental syntax parsing and highlighting tests.
+VER-007 LSP synchronization and stale-response tests.
+VER-008 Unicode position-conversion round-trip tests.
+VER-009 Exception, crash, and partial-write recovery tests.
+
+7. CURRENT STATUS
+
+7.1 Application skeleton compiles.
+7.2 VER-002 passed for normal exit, injected exception, and
+    repeated close.
+7.3 Remaining verification items are pending.
+
+8. OPEN DECISIONS
+
+8.1 App event representation and multiplexing.
+8.2 File encoding and position-conversion implementation.
+8.3 Tree-sitter grammar and OxCaml FFI compatibility.
+8.4 LSP process transport and notification scheduling.
+8.5 Ed line addressing versus character selection.
+8.6 OxCaml-specific performance optimizations.
+
+9. CHANGE CONTROL
+
+9.1 Record implementation decisions and evidence in CHANGELOG.
+9.2 Add or revise requirements before implementing new behavior.
+9.3 Associate completed requirements with verification results.
+
+10. REFERENCES
+
+[1] ISO/IEC/IEEE 29148:2018, Requirements Engineering.
+[2] RFC 2119, Requirement Levels.
+[3] RFC 8174, Clarification of Requirement Keywords.
