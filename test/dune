@@ -1,0 +1,3 @@
+(executable
+  (name terminal_smoke)
+  (libraries oxed lwt.unix))

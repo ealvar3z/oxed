@@ -1,3 +1,10 @@
+(library
+  (name oxed)
+  (wrapped false)
+  (modules app terminal workspace editor ed syntax language)
+  (libraries core core_unix zed lambda-term lwt.unix))
+
 (executable
   (name main)
-  (libraries core core_unix zed lambda-term lwt.unix))
+  (modules main)
+  (libraries oxed core lwt.unix))

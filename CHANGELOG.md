@@ -874,3 +874,69 @@ from dune.
     Implement Terminal using Lambda-term.
     Replace Terminal.open_ and Terminal.close
     with working resource management.
+
+## 2026-11-20 — 017. Terminal compilation successful
+
+### Observation
+
+    dune build
+
+    Exit status: 0
+
+### Correction
+
+    Lazy.Force -> Lazy.force
+
+### Accomplished
+
+    Terminal.open_ and Terminal.close now compile
+    against Lambda-term.
+
+### Remaining verification
+
+    1. Acquire the terminal.
+    2. Enter raw mode.
+    3. Restore the original terminal mode.
+    4. Verify that repeated close calls are safe.
+
+### Next
+
+    Isolated terminal lifecycle smoke test.
+
+## 2026-11-20 — 020. Terminal lifecycle verified
+
+### Experiment
+
+    dune build test/terminal_smoke.exe
+
+### Normal execution
+
+    Terminal.open_ ()
+    Terminal.close ()
+
+Result: PASS
+
+### Exceptional execution
+
+    Lwt.fail Injected
+    Lwt.finalize executes Terminal.close
+
+Result: PASS
+
+### Repeated cleanup
+
+    Terminal.close terminal
+    Terminal.close terminal
+
+Result: PASS
+
+### Conclusion
+
+Terminal acquisition and restoration have passed
+their first runtime tests.
+
+Milestone 002: COMPLETE.
+
+### Next
+
+Milestone 003 — Keyboard event handling.
