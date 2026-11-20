@@ -487,3 +487,99 @@ is important: Tree-sitter UTF-8 byte offsets versus LSP UTF-16 positions.
 
 **Exit criterion:** you own the source because you wrote it. The journal
 explains not just **what** was done, but **what the compiler demanded and why**.
+
+## Bootstrap — OxCaml compiler failure
+
+### Attempt
+
+    opam switch create oxcaml oxcaml-compiler \
+      --repos ox=git+https://github.com/oxcaml/opam-repository.git,default
+
+### Environment
+
+- Platform: macOS ARM64
+- opam: 2.6.1
+- Compiler: oxcaml-compiler.5.4.0-ox9
+- Bootstrap Dune: 3.23.1
+
+### Failure
+
+    ./_boot/dune.exe install ...
+    Segmentation fault: 11
+    exit-code: 139
+
+### Hypothesis
+
+The Dune bootstrap executable crashes during installation.
+The underlying cause has not yet been established.
+
+### Investigation
+
+1. Preserve the partially installed switch.
+2. Inspect the generated Dune executable.
+3. Execute dune.exe --version.
+4. Capture the LLDB backtrace if it crashes.
+5. Verify macOS and compiler toolchain versions.
+
+### Resolution
+
+Pending investigation.
+
+### Investigation 003 — Invalid reproduction
+
+Observed:
+    dune: option '--root': no .../rune-3.23.1 directory
+
+Cause:
+    Typographical error: rune instead of dune.
+
+Exit status:
+    1
+
+Conclusion:
+    Argument validation failed before installation.
+    Original SIGSEGV remains unresolved.
+
+Next:
+    Repeat with the correct --root directory.
+
+### Investigation 004 — Native runtime crash
+
+Environment:
+    macOS 26.7.1
+    ARM64
+    Apple Clang 21.0.0
+    OxCaml 5.4.0-ox9
+    Dune 3.23.1
+
+Reproduction:
+    dune.exe install --root ... --prefix ... dune
+
+Observed:
+    EXC_BAD_ACCESS (code=1, address=0x0)
+    frame #0: 0x0000000000000000
+    frame #1: caml_unix_pipe at pipe_unix.c:27
+
+Analysis:
+    The Unix runtime may be calling pipe2() through
+    a missing weak-linked symbol.
+
+Hypothesis:
+    macOS 27 SDK used on macOS 26.
+
+Next experiment:
+    xcrun --sdk macosx --show-sdk-version
+    xcrun --sdk macosx --show-sdk-path
+    nm -m "$dune" | grep -E '_(pipe2|dup3)'
+
+Resolution:
+    Pending verification.
+
+## Fri Nov 20 00:02:13 EST 2026
+```
+; dune build
+File "main.ml", line 5, characters 17-20:
+5 |     let* event = App.next_event app in
+                     ^^^
+Error: Unbound module App
+```
