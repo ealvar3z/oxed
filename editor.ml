@@ -21,3 +21,8 @@ let text editor =
 
 let path editor = editor.path
 let position editor = Zed_cursor.get_position editor.cursor
+
+let insert_char editor ch =
+  let ctx = Zed_edit.context editor.engine editor.cursor in
+  Zed_edit.insert_char ctx ch
+;;

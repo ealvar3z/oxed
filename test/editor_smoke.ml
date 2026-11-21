@@ -8,6 +8,12 @@ let run path =
   expect (Editor.text editor = "") "empty buffer";
   expect (Editor.path editor = None) "unnamed buffer";
   expect (Editor.position editor = 0) "initial cursor";
+  Editor.insert_char editor (Uchar.of_int 0x03BB);
+  expect (Editor.text editor = "λ") "Greek lambda insertion";
+  expect (Editor.position editor = 1) "cursor after lambda";
+  Editor.insert_char editor (Uchar.of_int 0x00E9);
+  expect (Editor.text editor = "λé") "accented insertion";
+  expect (Editor.position editor = 2) "cursor after accented char";
   let* workspace = Workspace.open_files [ path ] in
   let editor = Editor.create workspace in
   expect (Editor.text editor = "λ café\n") "UTF-8 round trip";
