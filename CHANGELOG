@@ -1,5 +1,10 @@
 oxed (0.2.0~dev1) UNRELEASED; urgency=low
 
+  * 004: Implement application event dispatch.
+    - Translate Lambda-term events into App.event.
+    - Implement Ctrl-Q shutdown.
+    - dune build: PASS.
+    - End-to-end event-loop test: PENDING.
   * 003: Verify keyboard input.
     - Export Terminal.read_event through terminal.mli.
     - Fix unused-value and unbound-value diagnostics.
