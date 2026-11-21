@@ -1,5 +1,13 @@
 oxed (0.2.0~dev1) UNRELEASED; urgency=low
 
+  * 006: Integrate Zed Unicode editing engine.
+    - Initialize Zed_edit from Workspace.active.
+    - Create cursor and editing context.
+    - Load UTF-8 text into Zed_rope.
+    - Expose text, path, and cursor position.
+    - dune build: PASS.
+    - Unicode runtime test: PENDING.
+    - Undo baseline verification: PENDING.
   * Add oxch, a standalone OxCaml changelog utility.
     - Implement Debian-style changelog validation and insertion.
     - Validate four existing stanzas: PASS.
