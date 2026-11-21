@@ -1,10 +1,12 @@
 oxed (0.2.0~dev1) UNRELEASED; urgency=low
 
   * Add oxch, a standalone OxCaml changelog utility.
-    - Implement read-only Debian-style stanza validation.
-    - Existing CHANGELOG (4 stanzas): PASS.
-    - Malformed input rejection: PENDING.
-
+    - Implement Debian-style changelog validation and insertion.
+    - Validate four existing stanzas: PASS.
+    - Reject malformed headers and maintainer trailers: PASS.
+    - Insert entries into the newest UNRELEASED stanza: PASS.
+    - Verify insertion without modifying older entries: PASS.
+    - Complete Debian format conformance: NOT IMPLEMENTED.
   * 005: Implement terminal rendering and smoke tests.
     - Add Terminal.render and App.render via Lambda-term.
     - Generalize POSIX smoke-test runner with executable arguments.
