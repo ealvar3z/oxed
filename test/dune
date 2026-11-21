@@ -1,3 +1,8 @@
 (executables
- (names terminal_smoke keyboard_smoke screen_smoke workspace_smoke)
+ (names
+  terminal_smoke
+  keyboard_smoke
+  screen_smoke
+  workspace_smoke
+  editor_smoke)
  (libraries oxed lwt.unix))

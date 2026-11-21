@@ -1,6 +1,12 @@
 oxed (0.2.0~dev1) UNRELEASED; urgency=low
 
-  * 006: Integrate Zed Unicode editing engine.
+  * 006.3: Verify Zed Unicode buffer initialization.
+    - Test empty and named buffers.
+    - Verify UTF-8 round trip with λ café.
+    - Verify file path and initial cursor position.
+    - Editor smoke test: PASS.
+    - Undo baseline: PENDING.
+  * 006.2: Integrate Zed Unicode editing engine.
     - Initialize Zed_edit from Workspace.active.
     - Create cursor and editing context.
     - Load UTF-8 text into Zed_rope.
@@ -8,6 +14,10 @@ oxed (0.2.0~dev1) UNRELEASED; urgency=low
     - dune build: PASS.
     - Unicode runtime test: PENDING.
     - Undo baseline verification: PENDING.
+  * 006.1: Implement Workspace initialization.
+    - Load existing files via Lwt_io; support empty unnamed buffers.
+    - Workspace smoke test (empty and named files): PASS.
+    - dune build: PASS.
   * Add oxch, a standalone OxCaml changelog utility.
     - Implement Debian-style changelog validation and insertion.
     - Validate four existing stanzas: PASS.
