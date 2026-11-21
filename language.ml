@@ -1,4 +1,7 @@
-type t
+type t = Disabled
 
-let start (_editor : Editor.t) : t Lwt.t = failwith "TODO: Language.start"
-let stop (_language : t) : unit Lwt.t = failwith "TODO: Language.stop"
+let start (_editor : Editor.t) : t Lwt.t = Lwt.return Disabled
+
+let stop : t -> unit Lwt.t = function
+  | Disabled -> Lwt.return_unit
+;;

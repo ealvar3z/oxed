@@ -4,5 +4,6 @@
   keyboard_smoke
   screen_smoke
   workspace_smoke
-  editor_smoke)
+  editor_smoke
+  language_smoke)
  (libraries oxed lwt.unix))
