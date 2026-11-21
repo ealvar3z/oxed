@@ -1,3 +1,3 @@
-type t
+type t = Editor.t
 
-let create (_editor : Editor.t) : t = failwith "TODO: Ed.create"
+let create editor = editor
