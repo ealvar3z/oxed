@@ -1,3 +1,5 @@
 profile = janestreet
 version = unknown
 margin  = 77
+sequence-blank-line = preserve-one
+module-item-spacing = preserve
