@@ -26,3 +26,9 @@ let insert_char editor ch =
   let ctx = Zed_edit.context editor.engine editor.cursor in
   Zed_edit.insert_char ctx ch
 ;;
+
+let context e = Zed_edit.context e.engine e.cursor
+let move_left e = Zed_edit.prev_char (context e)
+let move_right e = Zed_edit.next_char (context e)
+let backspace e = Zed_edit.delete_prev_char (context e)
+let delete_forward e = Zed_edit.delete_next_char (context e)
