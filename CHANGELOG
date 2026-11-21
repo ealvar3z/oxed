@@ -1,5 +1,14 @@
 oxed (0.2.0~dev1) UNRELEASED; urgency=low
 
+  * 003: Verify keyboard input.
+    - Export Terminal.read_event through terminal.mli.
+    - Fix unused-value and unbound-value diagnostics.
+    - Keyboard smoke test: PASS.
+    - Preserve terminal restoration after input.
+  * Export Terminal.read_event in terminal.mli.
+    - Fix warning 32: unused private declaration.
+    - Fix unbound Terminal.read_event in keyboard test.
+    - Verify keyboard smoke test.
   * Milestone 002: implement Terminal.open_ and Terminal.close with
     Lambda-term raw-mode acquisition and restoration.
   * Fix Lazy.Force -> Lazy.force; `dune build` passed.

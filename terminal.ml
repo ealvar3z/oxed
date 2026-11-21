@@ -17,3 +17,6 @@ let close t =
     let* () = LTerm.leave_raw_mode t.term t.mode in
     t.closed <- true;
     Lwt.return_unit
+
+let read_event t =
+  LTerm.read_event t.term
