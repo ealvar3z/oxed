@@ -1,0 +1,37 @@
+#!/bin/sh
+
+set -u
+
+if [ "$#" -eq 0 ]; then
+	echo "usage: $0 executable [args...]" >&2
+	exit 2
+fi
+
+normalize() {
+	case $(uname -s) in 
+		Darwin)
+			printf '%s\n' "$1" |
+				perl -pe 's/(lflag=)([[:xdigit:]]+)/$1 . sprintf("%x", hex($2) & ~0x20000000)/e'
+			;;
+		*)
+			printf '%s\n' "$1"
+			;;
+	esac
+}
+
+before=$(stty -g) || exit 1
+
+dune exec "$@"
+status=$?
+
+after=$(stty -g) || exit 1
+
+if [ "$status" -eq 0 ] &&
+	[ "$(normalize "$before")" = "$(normalize "$after")" ]; then
+	echo PASS
+else
+	printf 'FAIL (exit=%s)\n' "$status" >&2
+	printf 'before=$\nafter=%s\n' "$before" "$after" >&2
+	exit 1
+fi
+
