@@ -19,7 +19,9 @@ let run files =
       let* languages = Language.start editor in
       Lwt.finalize
         (fun () ->
-          let app = App.create ~terminal ~editor ~commands ~syntax ~languages in
+          let app =
+            App.create ~terminal ~editor ~commands ~syntax ~languages
+          in
           let* () = App.render app in
           loop app)
         (fun () -> Language.stop languages))

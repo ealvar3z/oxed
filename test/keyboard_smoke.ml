@@ -9,7 +9,9 @@ let rec read_key terminal =
 
 let run () =
   let* terminal = Terminal.open_ () in
-  Lwt.finalize (fun () -> read_key terminal) (fun () -> Terminal.close terminal)
+  Lwt.finalize
+    (fun () -> read_key terminal)
+    (fun () -> Terminal.close terminal)
 ;;
 
 let () =
