@@ -1,0 +1,3 @@
+(executable
+ (name oxch)
+ (libraries core core_unix str))

@@ -41,5 +41,17 @@ let dispatch app = function
   | _ -> Lwt.return_unit
 ;;
 
-let render (_app : t) : unit Lwt.t = failwith "TODO: App.render"
+let render (app : t) : unit Lwt.t =
+  Terminal.render app.terminal (fun ctx ->
+    let rows = (LTerm_draw.size ctx).rows in
+    LTerm_draw.draw_string ctx 0 0 (Zed_string.of_utf8 "oxed");
+    if rows > 1
+    then
+      LTerm_draw.draw_string
+        ctx
+        (rows - 1)
+        0
+        (Zed_string.of_utf8 "Ctrl-Q quit"))
+;;
+
 let running (app : t) : bool = app.running

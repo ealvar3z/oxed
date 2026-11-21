@@ -22,3 +22,18 @@ let close t =
 ;;
 
 let read_event t = LTerm.read_event t.term
+
+let render t draw =
+  let size = LTerm.size t.term in
+  let matrix = LTerm_draw.make_matrix size in
+  let ctx = LTerm_draw.context matrix size in
+  let style =
+    { LTerm_style.none with
+      foreground = Some LTerm_style.white
+    ; background = Some LTerm_style.black
+    }
+  in
+  LTerm_draw.fill_style ctx style;
+  draw ctx;
+  LTerm.render t.term matrix
+;;

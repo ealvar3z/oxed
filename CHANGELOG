@@ -1,30 +1,29 @@
 oxed (0.2.0~dev1) UNRELEASED; urgency=low
 
+  * Add oxch, a standalone OxCaml changelog utility.
+    - Implement read-only Debian-style stanza validation.
+    - Existing CHANGELOG (4 stanzas): PASS.
+    - Malformed input rejection: PENDING.
+
+  * 005: Implement terminal rendering and smoke tests.
+    - Add Terminal.render and App.render via Lambda-term.
+    - Generalize POSIX smoke-test runner with executable arguments.
+    - Build and runtime tests: PASS.
+    - Full application startup: PENDING.
   * 004: Implement application event dispatch.
     - Translate Lambda-term events into App.event.
-    - Implement Ctrl-Q shutdown.
-    - dune build: PASS.
-    - End-to-end event-loop test: PENDING.
-  * 003: Verify keyboard input.
+    - Add Ctrl-Q shutdown handling.
+    - Build: PASS; integration test: PENDING.
+  * 003: Implement asynchronous keyboard input.
     - Export Terminal.read_event through terminal.mli.
-    - Fix unused-value and unbound-value diagnostics.
+    - Resolve unused-value and unbound-value diagnostics.
     - Keyboard smoke test: PASS.
-    - Preserve terminal restoration after input.
-  * Export Terminal.read_event in terminal.mli.
-    - Fix warning 32: unused private declaration.
-    - Fix unbound Terminal.read_event in keyboard test.
-    - Verify keyboard smoke test.
-  * Milestone 002: implement Terminal.open_ and Terminal.close with
-    Lambda-term raw-mode acquisition and restoration.
-  * Fix Lazy.Force -> Lazy.force; `dune build` passed.
-  * Move editor modules into a reusable oxed library (wrapped false);
-    retain main as a thin executable and add test/terminal_smoke.ml.
-  * Fix warning 52 (fragile-literal-pattern): replace matching on
-    Failure "injected" with a dedicated Injected exception.
-  * Test: `dune build test/terminal_smoke.exe`; compare `stty -g`
-    before and after normal execution and injected exception handling.
-    Both reported PASS; repeated Terminal.close also passed.
-  * Next: Milestone 003, keyboard events via Lambda-term.
+  * 002: Implement and verify terminal lifecycle.
+    - Acquire and restore raw mode through Lambda-term.
+    - Correct Lazy.Force to Lazy.force.
+    - Extract reusable oxed library and terminal smoke test.
+    - Replace fragile Failure pattern with Injected exception.
+    - Normal exit, exception cleanup, repeated close: PASS.
 
  -- EAX <info@dst9.org>  Fri, 20 Nov 2026 00:00:00 -0500
 
