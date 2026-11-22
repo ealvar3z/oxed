@@ -85,12 +85,9 @@ let render (app : t) : unit Lwt.t =
   in
   Terminal.render app.terminal ~cursor_col (fun ctx ->
     let rows = (LTerm_draw.size ctx).rows in
-
     LTerm_draw.draw_string ctx 0 0 (Zed_string.of_utf8 "oxed");
-
     if rows > 2
     then LTerm_draw.draw_string ctx 1 0 (Zed_string.of_utf8 app.feedback);
-
     if rows > 1
     then LTerm_draw.draw_string ctx (rows - 1) 0 (Zed_string.of_utf8 prompt))
 ;;

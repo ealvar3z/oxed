@@ -36,7 +36,6 @@ let render t ?cursor_col draw =
   in
   LTerm_draw.fill_style ctx style;
   draw ctx;
-
   let* () = LTerm.render t.term matrix in
   match cursor_col with
   | Some col when size.rows > 0 && size.cols > 0 ->
