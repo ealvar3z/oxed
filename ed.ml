@@ -8,11 +8,16 @@ type t =
   ; mutable dot : range
   }
 
+type direction =
+  | Forward
+  | Backward
+
 type address =
   | All 
   | Dot
   | Eof
   | Line of int
+  | Relative of address * direction * int
   | Between of address * address
 
 type command =
@@ -54,21 +59,46 @@ let index_lines content =
 ;;
 
 let parse_address source =
-  let atom = function
-    | "" | "." -> Some Dot
-    | "$" -> Some Eof
-    | text ->
-        Option.map (fun n -> Line n) (int_of_string_opt text)
+  let rec atom source =
+    let length = String.length source in
+
+    let rec find_sign i =
+      if i >= length then None
+      else (
+        match source.[i] with
+        | '+' -> Some (i, Forward)
+        | '-' -> Some (i, Backward)
+        | _ -> find_sign (i + 1))
+    in
+
+    match find_sign 0 with
+    | None ->
+      (match source with
+       | "" | "." -> Some Dot
+       | "$" -> Some Eof
+       | text ->
+         (match int_of_string_opt text with
+          | Some n when n > 0 -> Some (Line n)
+          | _ -> None))
+    | Some (i, direction) ->
+      let base = String.sub source 0 i in
+      let suffix = String.sub source (i + 1) (length - i - 1) in
+      let distance =
+        if suffix = "" then Some 1 else int_of_string_opt suffix
+      in
+      (match atom base, distance with
+       | Some base, Some n when n > 0 ->
+         Some (Relative (base, direction, n))
+       | _ -> None)
   in
 
-  match String.split_on_char ',' source with 
-  | [""; "" ] -> Some All 
+  match String.split_on_char ',' source with
+  | [ ""; "" ] -> Some All
   | [ first; last ] ->
-      (match atom first, atom last with 
-      | Some first, Some last ->
-          Some (Between (first, last))
-      | _ -> None)
-  | [ address ] -> atom address 
+    (match atom first, atom last with
+     | Some first, Some last -> Some (Between (first, last))
+     | _ -> None)
+  | [ address ] -> atom address
   | _ -> None
 ;;
 
@@ -111,6 +141,24 @@ let execute ed source =
           (match List.find_opt (fun (i, _, _) -> i = n) indexed with 
             | Some (_, range, _) -> Ok range
             | None -> Error "? address out of range")
+      | Relative (base, direction, distance) ->
+          (match resolve base with 
+          | Error message -> Error message
+          | Ok base ->
+              let candidates =
+                match direction with 
+                | Forward ->
+                    List.filter
+                      (fun (_, line, _) -> line.start >= base.stop)
+                    indexed
+                | Backward ->
+                    List.rev indexed
+                    |> List.filter (fun (_, line, _) ->
+                        line.stop <= base.start)
+              in
+              (match List.nth_opt candidates (distance - 1) with 
+              | Some (_, range, _) -> Ok range
+              | None -> Error "? address out of range"))
       | Between (first, last) ->
           (match resolve first, resolve last with 
           | Ok a, Ok b when a.start <= b.stop ->
@@ -122,8 +170,8 @@ let execute ed source =
     match resolve address with 
     | Error message -> Error message
     | Ok range -> 
-        Printf.eprintf "command=%S dot=[%d,%d) range=[%d,%d)\n%!" source
-        ed.dot.start ed.dot.stop range.start range.stop;
+        (* Printf.eprintf "command=%S dot=[%d,%d) range=[%d,%d)\n%!" source *)
+        (* ed.dot.start ed.dot.stop range.start range.stop; *)
         ed.dot <- range;
 
       (match command with 

@@ -69,6 +69,38 @@ let run path =
     (Ed.execute commands "xyz" = Error "? unknown command")
     "unknown command";
 
+  let* workspace = Workspace.open_files [] in 
+  let editor = Editor.create workspace in 
+
+  String.iter
+    (fun ch ->
+    Editor.insert_char editor (Uchar.of_int (Char.code ch)))
+    "alpha\nbeta\ncharlie\n";
+
+  let commands = Ed.create editor in 
+
+  expect (Ed.execute commands "1p" = Ok "alpha")
+    "first line";
+
+  expect (Ed.execute commands "+p" = Ok "beta")
+    "next line";
+
+  expect (Ed.execute commands "-p" = Ok "alpha")
+    "previous line";
+
+  expect (Ed.execute commands ".+2n" = Ok "3  charlie")
+    "relative numbered address";
+
+  expect (Ed.execute commands "$-p" = Ok "charlie")
+    "last line from EOF";
+
+  expect
+    (Ed.execute commands "+p" = Error "? address out of range")
+    "next line beyond EOF";
+
+  expect (Ed.execute commands ".p" = Ok "charlie")
+    "invalid address preserves dot";
+
   Lwt.return_unit
 ;;
 
