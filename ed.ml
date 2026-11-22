@@ -53,44 +53,56 @@ let index_lines content =
     i + 1, { start; stop }, text)
 ;;
 
-let parse_address source =
-  let rec atom source =
-    let length = String.length source in
-    let rec find_sign i =
-      if i >= length
-      then None
-      else (
-        match source.[i] with
-        | '+' -> Some (i, Forward)
-        | '-' -> Some (i, Backward)
-        | _ -> find_sign (i + 1))
-    in
-    match find_sign 0 with
-    | None ->
-      (match source with
-       | "" | "." -> Some Dot
-       | "$" -> Some Eof
-       | text ->
-         (match int_of_string_opt text with
-          | Some n when n > 0 -> Some (Line n)
-          | _ -> None))
-    | Some (i, direction) ->
-      let base = String.sub source 0 i in
-      let suffix = String.sub source (i + 1) (length - i - 1) in
-      let distance =
-        if suffix = "" then Some 1 else int_of_string_opt suffix
-      in
-      (match atom base, distance with
-       | Some base, Some n when n > 0 -> Some (Relative (base, direction, n))
-       | _ -> None)
+let parse_simple = function
+  | "" | "." -> Some Dot
+  | "$" -> Some Eof
+  | text ->
+    (match int_of_string_opt text with
+     | Some n when n > 0 -> Some (Line n)
+     | _ -> None)
+;;
+
+let find_sign source =
+  let rec loop i =
+    if i >= String.length source
+    then None
+    else (
+      match source.[i] with
+      | '+' -> Some (i, Forward)
+      | '-' -> Some (i, Backward)
+      | _ -> loop (i + 1))
   in
+  loop 0
+;;
+
+let parse_distance = function
+  | "" -> Some 1
+  | text ->
+    (match int_of_string_opt text with
+     | Some n when n > 0 -> Some n
+     | _ -> None)
+;;
+
+let parse_atom source =
+  match find_sign source with
+  | None -> parse_simple source
+  | Some (i, direction) ->
+    let base = String.sub source 0 i in
+    let suffix = String.sub source (i + 1) (String.length source - i - 1) in
+    (match parse_simple base, parse_distance suffix with
+     | Some base, Some distance ->
+       Some (Relative (base, direction, distance))
+     | _ -> None)
+;;
+
+let parse_address source =
   match String.split_on_char ',' source with
   | [ ""; "" ] -> Some All
   | [ first; last ] ->
-    (match atom first, atom last with
+    (match parse_atom first, parse_atom last with
      | Some first, Some last -> Some (Between (first, last))
      | _ -> None)
-  | [ address ] -> atom address
+  | [ address ] -> parse_atom address
   | _ -> None
 ;;
 
@@ -115,73 +127,80 @@ let parse source =
        | None -> Error "? invalid address"))
 ;;
 
+let resolve_line indexed n =
+  match List.find_opt (fun (i, _, _) -> i = n) indexed with
+  | Some (_, range, _) -> Ok range
+  | None -> Error "? address out of range"
+;;
+
+let resolve_relative indexed base direction distance =
+  let candidates =
+    match direction with
+    | Forward ->
+      List.filter (fun (_, line, _) -> line.start >= base.stop) indexed
+    | Backward ->
+      List.rev indexed
+      |> List.filter (fun (_, line, _) -> line.stop <= base.start)
+  in
+  match List.nth_opt candidates (distance - 1) with
+  | Some (_, range, _) -> Ok range
+  | None -> Error "? address out of range"
+;;
+
+let ( let* ) = Result.bind
+
+let rec resolve_address ed indexed total = function
+  | All -> Ok { start = 0; stop = total }
+  | Dot -> Ok ed.dot
+  | Eof -> Ok { start = total; stop = total }
+  | Line n -> resolve_line indexed n
+  | Relative (base, direction, distance) ->
+    let* base = resolve_address ed indexed total base in
+    resolve_relative indexed base direction distance
+  | Between (first, last) ->
+    let* a = resolve_address ed indexed total first in
+    let* b = resolve_address ed indexed total last in
+    if a.start <= b.stop
+    then Ok { start = a.start; stop = b.stop }
+    else Error "? reversed range"
+;;
+
+let print_range text range =
+  let output =
+    Zed_string.sub ~pos:range.start ~len:(range.stop - range.start) text
+    |> Zed_string.to_utf8
+  in
+  let length = String.length output in
+  if length > 0 && output.[length - 1] = '\n'
+  then String.sub output 0 (length - 1)
+  else output
+;;
+
+let number_range indexed range =
+  indexed
+  |> List.filter (fun (_, line, _) ->
+    line.start < range.stop && range.start < line.stop)
+  |> List.map (fun (i, _, text) -> Printf.sprintf "%d  %s" i text)
+  |> String.concat "\n"
+;;
+
+let format_command text indexed range = function
+  | Print -> print_range text range
+  | Number -> number_range indexed range
+;;
+
 let execute ed source =
-  match parse source with
-  | Error message -> Error message
-  | Ok None -> Ok ""
-  | Ok (Some { address; command }) ->
+  let* expression = parse source in
+  match expression with
+  | None -> Ok ""
+  | Some { address; command } ->
     let content = Editor.text ed.editor in
     let text = Zed_string.of_utf8 content in
-    let total = Zed_string.length text in
     let indexed = index_lines content in
-    let rec resolve = function
-      | All -> Ok { start = 0; stop = total }
-      | Dot -> Ok ed.dot
-      | Eof -> Ok { start = total; stop = total }
-      | Line n ->
-        (match List.find_opt (fun (i, _, _) -> i = n) indexed with
-         | Some (_, range, _) -> Ok range
-         | None -> Error "? address out of range")
-      | Relative (base, direction, distance) ->
-        (match resolve base with
-         | Error message -> Error message
-         | Ok base ->
-           let candidates =
-             match direction with
-             | Forward ->
-               List.filter
-                 (fun (_, line, _) -> line.start >= base.stop)
-                 indexed
-             | Backward ->
-               List.rev indexed
-               |> List.filter (fun (_, line, _) -> line.stop <= base.start)
-           in
-           (match List.nth_opt candidates (distance - 1) with
-            | Some (_, range, _) -> Ok range
-            | None -> Error "? address out of range"))
-      | Between (first, last) ->
-        (match resolve first, resolve last with
-         | Ok a, Ok b when a.start <= b.stop ->
-           Ok { start = a.start; stop = b.stop }
-         | Ok _, Ok _ -> Error "? reversed range"
-         | Error message, _ | _, Error message -> Error message)
+    let* range =
+      resolve_address ed indexed (Zed_string.length text) address
     in
-    (match resolve address with
-     | Error message -> Error message
-     | Ok range ->
-       (* Printf.eprintf "command=%S dot=[%d,%d) range=[%d,%d)\n%!" source *)
-       (* ed.dot.start ed.dot.stop range.start range.stop; *)
-       ed.dot <- range;
-       (match command with
-        | Print ->
-          let output =
-            Zed_string.sub
-              ~pos:range.start
-              ~len:(range.stop - range.start)
-              text
-            |> Zed_string.to_utf8
-          in
-          let length = String.length output in
-          if length > 0 && output.[length - 1] = '\n'
-          then Ok (String.sub output 0 (length - 1))
-          else Ok output
-        | Number ->
-          let output =
-            indexed
-            |> List.filter (fun (_, line, _) ->
-              line.start < range.stop && range.start < line.stop)
-            |> List.map (fun (i, _, text) -> Printf.sprintf "%d  %s" i text)
-            |> String.concat "\n"
-          in
-          Ok output))
+    let output = format_command text indexed range command in
+    ed.dot <- range;
+    Ok output
 ;;
