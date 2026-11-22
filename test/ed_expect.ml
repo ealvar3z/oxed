@@ -13,7 +13,8 @@ let%expect_test "whole-buffer, numbered, dot, and EOF addresses" =
   Fixture.with_file "λ café\n" (fun path ->
     let workspace = Lwt_main.run (Workspace.open_files [ path ]) in
     let ed = Ed.create (Editor.create workspace) in
-    transcript ed
+    transcript
+      ed
       [ ",p"; ",n"; "1n"; "1,1p"; "1p"; ".p"; ".n"; "$p"; ".p"; "2p"; "xyz" ]);
   [%expect
     {|
