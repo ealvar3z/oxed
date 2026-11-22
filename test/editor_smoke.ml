@@ -41,6 +41,19 @@ let run path =
   expect (Editor.path editor = Some path) "file path";
   expect (Editor.position editor = 0) "cursor reset";
 
+  let commands = Ed.create editor in 
+  expect
+    (Ed.execute commands ",p" = Ok "λ café")
+    "print entire buffer";
+
+  expect
+    (Ed.execute commands ",n" = Ok "1  λ café")
+    "numbered output";
+
+  expect
+    (Ed.execute commands "invalid" = Error "? unknown command")
+    "unknown command";
+
   Lwt.return_unit
 ;;
 

@@ -67,7 +67,10 @@ let dispatch app = function
      | LTerm_key.Char ch -> app.command <- append_char app.command ch
      | LTerm_key.Backspace -> app.command <- remove_last app.command
      | LTerm_key.Enter ->
-       app.feedback <- "entered: " ^ app.command;
+       app.feedback <- 
+         (match Ed.execute app.commands app.command with
+         | Ok output -> output
+         | Error message -> message);
        app.command <- ""
      | LTerm_key.Escape -> app.command <- ""
      | _ -> ());
@@ -76,18 +79,20 @@ let dispatch app = function
 ;;
 
 let render (app : t) : unit Lwt.t =
-  Terminal.render app.terminal (fun ctx ->
+  let prompt = "λ " ^ app.command in
+  let cursor_col =
+    Zed_string.of_utf8 prompt |> Zed_string.width |> Zed_string.aval_width
+  in
+  Terminal.render app.terminal ~cursor_col (fun ctx ->
     let rows = (LTerm_draw.size ctx).rows in
 
     LTerm_draw.draw_string ctx 0 0 (Zed_string.of_utf8 "oxed");
 
-    if rows > 2 then
-      LTerm_draw.draw_string ctx 1 0
-        (Zed_string.of_utf8 app.feedback);
-    
-    if rows > 1 then
-      LTerm_draw.draw_string ctx (rows - 1) 0
-        (Zed_string.of_utf8 ("λ " ^ app.command)))
+    if rows > 2
+    then LTerm_draw.draw_string ctx 1 0 (Zed_string.of_utf8 app.feedback);
+
+    if rows > 1
+    then LTerm_draw.draw_string ctx (rows - 1) 0 (Zed_string.of_utf8 prompt))
 ;;
 
 let running (app : t) : bool = app.running
