@@ -67,10 +67,10 @@ let dispatch app = function
      | LTerm_key.Char ch -> app.command <- append_char app.command ch
      | LTerm_key.Backspace -> app.command <- remove_last app.command
      | LTerm_key.Enter ->
-       app.feedback <- 
-         (match Ed.execute app.commands app.command with
-         | Ok output -> output
-         | Error message -> message);
+       app.feedback
+       <- (match Ed.execute app.commands app.command with
+           | Ok output -> output
+           | Error message -> message);
        app.command <- ""
      | LTerm_key.Escape -> app.command <- ""
      | _ -> ());

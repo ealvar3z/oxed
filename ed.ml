@@ -1,8 +1,19 @@
-type t = Editor.t
+type range =
+  { start : int
+  ; stop : int
+  }
+
+type t = 
+  { editor : Editor.t
+  ; mutable dot : range
+  }
+
 type address =
   | All 
+  | Dot
+  | Eof
   | Line of int
-  | Range of int * int
+  | Between of address * address
 
 type command =
   | Print
@@ -13,7 +24,12 @@ type expression =
   ; command : command
   }
 
-let create editor = editor
+let create editor = 
+  { editor
+  ; dot = { start = 0; stop = 0 }
+  }
+;;
+
 let lines text =
   if text = "" then []
   else
@@ -21,6 +37,39 @@ let lines text =
     match List.rev lines with
     | "" :: rest -> List.rev rest
     | _ -> lines
+;;
+
+let index_lines content =
+  let total = Zed_string.length (Zed_string.of_utf8 content) in 
+  let offset = ref 0 in 
+
+  lines content
+  |> List.mapi (fun i text ->
+      let start = !offset in 
+      let length = Zed_string.length (Zed_string.of_utf8 text) in 
+      let stop = min total (start + length + 1) in 
+
+      offset := stop;
+      i + 1, { start; stop }, text)
+;;
+
+let parse_address source =
+  let atom = function
+    | "" | "." -> Some Dot
+    | "$" -> Some Eof
+    | text ->
+        Option.map (fun n -> Line n) (int_of_string_opt text)
+  in
+
+  match String.split_on_char ',' source with 
+  | [""; "" ] -> Some All 
+  | [ first; last ] ->
+      (match atom first, atom last with 
+      | Some first, Some last ->
+          Some (Between (first, last))
+      | _ -> None)
+  | [ address ] -> atom address 
+  | _ -> None
 ;;
 
 let parse source =
@@ -38,51 +87,65 @@ let parse source =
     | None -> Error "? unknown command"
     | Some command ->
         let prefix = String.sub source 0 last in 
-        let address =
-          match String.split_on_char ',' prefix with
-          | [""; ""] -> Some All
-          | [ line ] ->
-              Option.map (fun n -> Line n) (int_of_string_opt line)
-          | [ first; last ] ->
-              (match int_of_string_opt first, int_of_string_opt last with
-              | Some first, Some last -> Some (Range (first, last))
-              | _ -> None)
-          | _ -> None
-        in 
-        (match address with
+
+        (match parse_address prefix with
         | Some address -> Ok (Some { address; command })
         | None -> Error "? invalid address"))
 ;;
 
-let execute editor source =
+let execute ed source =
   match parse source with
   | Error message -> Error message
   | Ok None -> Ok ""
   | Ok (Some { address; command }) ->
-    let content = lines (Editor.text editor) in 
-    let count = List.length content in 
-    let first, last =
-      match address with
-      | All -> 1, count
-      | Line n -> n, n
-      | Range (a, b) -> a, b
-    in 
-    if count = 0 && address = All then Ok ""
-    else if first < 1 || last > count || first > last then
-      Error "? address out of range"
-    else (
-      let selected =
-        content
-        |> List.mapi (fun i line -> i + 1, line)
-        |> List.filter (fun (i, _) -> i >= first && i <= last)
-      in 
-      let output =
-        List.map
-        (fun (i, line) ->
-          match command with
-          | Print -> line
-          | Number -> Printf.sprintf "%d  %s" i line)
-        selected
-      in 
-      Ok (String.concat "\n" output))
-;;
+    let content = Editor.text ed.editor in 
+    let text = Zed_string.of_utf8 content in
+    let total = Zed_string.length text in
+    let indexed = index_lines content in 
+
+    let rec resolve = function
+      | All -> Ok { start = 0; stop = total }
+      | Dot -> Ok ed.dot
+      | Eof -> Ok { start = total; stop = total }
+      | Line n ->
+          (match List.find_opt (fun (i, _, _) -> i = n) indexed with 
+            | Some (_, range, _) -> Ok range
+            | None -> Error "? address out of range")
+      | Between (first, last) ->
+          (match resolve first, resolve last with 
+          | Ok a, Ok b when a.start <= b.stop ->
+              Ok { start = a.start; stop = b.stop }
+          | Ok _, Ok _ -> Error "? reversed range"
+          | Error message, _ | _, Error message -> Error message)
+    in
+
+    match resolve address with 
+    | Error message -> Error message
+    | Ok range -> 
+        Printf.eprintf "command=%S dot=[%d,%d) range=[%d,%d)\n%!" source
+        ed.dot.start ed.dot.stop range.start range.stop;
+        ed.dot <- range;
+
+      (match command with 
+      | Print ->
+          let output =
+            Zed_string.sub
+              ~pos:range.start 
+              ~len:(range.stop - range.start)
+              text
+            |> Zed_string.to_utf8
+          in 
+          let length = String.length output in 
+          if length > 0 && output.[length - 1] = '\n' then 
+            Ok (String.sub output 0 (length - 1))
+          else Ok output
+      | Number ->
+          let output = 
+            indexed
+            |> List.filter (fun (_, line, _) ->
+                line.start < range.stop && range.start < line.stop)
+            |> List.map (fun (i, _, text) ->
+                Printf.sprintf "%d  %s" i text)
+            |> String.concat "\n"
+          in 
+          Ok output)

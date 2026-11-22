@@ -41,30 +41,26 @@ let run path =
   expect (Editor.path editor = Some path) "file path";
   expect (Editor.position editor = 0) "cursor reset";
 
-  let commands = Ed.create editor in 
-  (* expect *)
-  (*   (Ed.execute commands ",p" = Ok "λ café") *)
-  (*   "whole-buffer print"; *)
-  let result = Ed.execute commands ",p" in
+  let commands = Ed.create editor in
 
-  (match result with
-   | Ok text -> Printf.printf "actual: Ok %S\n" text
-   | Error err -> Printf.printf "actual: Error %S\n" err);
+  expect (Ed.execute commands ",p" = Ok "λ café") "whole-buffer print";
 
-  expect (result = Ok "λ café") "whole-buffer print";
+  expect (Ed.execute commands ",n" = Ok "1  λ café") "numbered output";
 
-  expect
-    (Ed.execute commands ",n" = Ok "1  λ café")
-    "numbered output";
-  
-  expect
-    (Ed.execute commands "1n" = Ok "1  λ café")
-    "numbered line";
+  expect (Ed.execute commands "1n" = Ok "1  λ café") "numbered line";
 
-  expect
-    (Ed.execute commands "1,1p" = Ok "λ café")
-    "line range";
-    
+  expect (Ed.execute commands "1,1p" = Ok "λ café") "line range";
+
+  expect (Ed.execute commands "1p" = Ok "λ café") "select first line";
+
+  expect (Ed.execute commands ".p" = Ok "λ café") "print dot";
+
+  expect (Ed.execute commands ".n" = Ok "1  λ café") "number dot";
+
+  expect (Ed.execute commands "$p" = Ok "") "end-of-file empty selection";
+
+  expect (Ed.execute commands ".p" = Ok "") "dot follows end-of-file";
+
   expect
     (Ed.execute commands "2p" = Error "? address out of range")
     "invalid line";

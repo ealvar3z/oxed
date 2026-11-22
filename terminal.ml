@@ -23,7 +23,8 @@ let close t =
 
 let read_event t = LTerm.read_event t.term
 
-let render t draw =
+let render t ?cursor_col draw =
+  let open Lwt.Syntax in
   let size = LTerm.size t.term in
   let matrix = LTerm_draw.make_matrix size in
   let ctx = LTerm_draw.context matrix size in
@@ -35,5 +36,11 @@ let render t draw =
   in
   LTerm_draw.fill_style ctx style;
   draw ctx;
-  LTerm.render t.term matrix
+
+  let* () = LTerm.render t.term matrix in
+  match cursor_col with
+  | Some col when size.rows > 0 && size.cols > 0 ->
+    let col = max 0 (min (size.cols - 1) col) in
+    LTerm.goto t.term { LTerm_geom.row = size.rows - 1; col }
+  | _ -> Lwt.return_unit
 ;;
