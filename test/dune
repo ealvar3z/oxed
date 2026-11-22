@@ -1,9 +1,11 @@
+(library
+ (name oxed_tests)
+ (modules fixture editor_test workspace_test language_test ed_expect)
+ (libraries oxed lwt.unix)
+ (inline_tests)
+ (preprocess (pps ppx_expect)))
+
 (executables
- (names
-  terminal_smoke
-  keyboard_smoke
-  screen_smoke
-  workspace_smoke
-  editor_smoke
-  language_smoke)
- (libraries oxed lwt.unix))
+ (names terminal_smoke keyboard_smoke screen_smoke)
+ (modules terminal_smoke keyboard_smoke screen_smoke)
+ (libraries oxed lwt.unix lambda-term zed))
