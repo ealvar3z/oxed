@@ -1,108 +1,41 @@
 oxed (0.2.0~dev1) UNRELEASED; urgency=low
 
-  * 006.3: Verify Zed Unicode buffer initialization.
-    - Test empty and named buffers.
-    - Verify UTF-8 round trip with λ café.
-    - Verify file path and initial cursor position.
-    - Editor smoke test: PASS.
-    - Undo baseline: PENDING.
-  * 006.2: Integrate Zed Unicode editing engine.
-    - Initialize Zed_edit from Workspace.active.
-    - Create cursor and editing context.
-    - Load UTF-8 text into Zed_rope.
-    - Expose text, path, and cursor position.
-    - dune build: PASS.
-    - Unicode runtime test: PENDING.
-    - Undo baseline verification: PENDING.
-  * 006.1: Implement Workspace initialization.
-    - Load existing files via Lwt_io; support empty unnamed buffers.
-    - Workspace smoke test (empty and named files): PASS.
-    - dune build: PASS.
-  * Add oxch, a standalone OxCaml changelog utility.
-    - Implement Debian-style changelog validation and insertion.
-    - Validate four existing stanzas: PASS.
-    - Reject malformed headers and maintainer trailers: PASS.
-    - Insert entries into the newest UNRELEASED stanza: PASS.
-    - Verify insertion without modifying older entries: PASS.
-    - Complete Debian format conformance: NOT IMPLEMENTED.
-  * 005: Implement terminal rendering and smoke tests.
-    - Add Terminal.render and App.render via Lambda-term.
-    - Generalize POSIX smoke-test runner with executable arguments.
-    - Build and runtime tests: PASS.
-    - Full application startup: PENDING.
-  * 004: Implement application event dispatch.
-    - Translate Lambda-term events into App.event.
-    - Add Ctrl-Q shutdown handling.
-    - Build: PASS; integration test: PENDING.
-  * 003: Implement asynchronous keyboard input.
-    - Export Terminal.read_event through terminal.mli.
-    - Resolve unused-value and unbound-value diagnostics.
-    - Keyboard smoke test: PASS.
-  * 002: Implement and verify terminal lifecycle.
-    - Acquire and restore raw mode through Lambda-term.
-    - Correct Lazy.Force to Lazy.force.
-    - Extract reusable oxed library and terminal smoke test.
-    - Replace fragile Failure pattern with Injected exception.
-    - Normal exit, exception cleanup, repeated close: PASS.
+  * Establish the OxCaml terminal editor foundation.
+    - Implement asynchronous application lifecycle and cleanup.
+    - Integrate Lambda-term for keyboard input and rendering.
+    - Integrate Zed for Unicode text buffers and editing.
+    - Support opening existing files and unnamed buffers.
 
- -- EAX <info@dst9.org>  Fri, 20 Nov 2026 00:00:00 -0500
+  * Introduce the oxed command interface.
+    - Use λ as the Unicode command prompt.
+    - Support keyboard-driven command entry and submission.
+    - Implement p for printing and n for numbered output.
+    - Parse absolute line addresses and compound ranges.
+    - Represent dot as a half-open Unicode selection range.
+    - Support beginning-of-buffer and end-of-file addressing.
 
-oxed (0.1.1~dev1) UNRELEASED; urgency=low
+  * Implement foundational editing operations.
+    - Insert Unicode characters.
+    - Move the editing cursor.
+    - Delete characters forward and backward.
+    - Preserve UTF-8 text during file loading.
 
-  * Milestone 001: specify the final main.ml lifecycle using Lwt,
-    nested Lwt.finalize cleanup, and the App event loop.
-  * Resolve unbound modules through .mli contracts: App, Terminal,
-    Editor, Workspace, Ed, Syntax, and Language. Temporarily use
-    modules_without_implementation in dune.
-  * Correct Language.start : Editor.t -> t Lwt.t and declare
-    Language.stop : t -> unit Lwt.t; supply both Lwt.finalize callbacks.
-  * Add matching .ml implementations, initially with explicit TODO
-    failures; remove modules_without_implementation after linking.
-  * Replace unused event constructor Pending with unit (warning 37).
-  * Commands: `dune build`; inspect diagnostic; add smallest contract;
-    rebuild. The linked bootstrap eventually built successfully.
-  * Remaining: most editor behavior is still intentionally unimplemented.
+  * Improve terminal behavior.
+    - Position the physical cursor at the command prompt.
+    - Restore terminal state after normal and exceptional exits.
+    - Support Ctrl-Q for application termination.
 
- -- EAX <info@dst9.org>  Fri, 20 Nov 2026 00:00:00 -0500
+  * Adopt Sam-style structural editing as the design direction.
+    - Retain Ed as the command interpreter.
+    - Prefer composable regular expressions over mandatory
+      language-specific syntax parsers.
+    - Reserve mouse interaction for an optional setting.
+    - Defer Tree-sitter and LSP integration.
 
-oxed (0.1.0~dev1) UNRELEASED; urgency=medium
+  * Add native build and regression tests.
+    - Verify terminal lifecycle and cleanup.
+    - Verify Unicode buffer initialization and editing.
+    - Verify command parsing, numbered output, and dot semantics.
 
-  * OxCaml bootstrap on macOS arm64 (opam 2.6.1) failed while
-    installing Dune 3.23.1 under oxcaml-compiler 5.4.0-ox9:
-    `./_boot/dune.exe install ...` exited 139 (SIGSEGV).
-  * Reproduce under LLDB: EXC_BAD_ACCESS at address 0x0 from
-    caml_unix_pipe (pipe_unix.c:27). `dune.exe --version` worked.
-  * Confirm SDK mismatch: macOS 26.7.1 was using macOS 27.0 SDK;
-    `nm -m "$dune"` showed weak external _pipe2 and _dup3.
-  * Identified installed MacOSX26.5.sdk. Proposed rebuilding with:
-    `export SDKROOT=/Library/Developer/CommandLineTools/SDKs/MacOSX26.5.sdk`
-    `export MACOSX_DEPLOYMENT_TARGET=26.0`
-  * Subsequent opam retry also reported Sys_error("No such file or
-    directory"); deleted build-directory cwd was a hypothesis, not
-    a verified cause. Exact reinstall sequence was not recorded here.
-  * Do not confuse a successful native build with runtime ABI safety.
+ -- EAX <info@dst9.org>  Sat, 21 Nov 2026 00:00:00 -0500
 
- -- EAX <info@dst9.org>  Wed, 18 Nov 2026 00:00:00 -0500
-
-oxed (0.0.1~dev1) UNRELEASED; urgency=low
-
-  * Seed documentation-first Git repository: README.md, SPEC.md,
-    CHANGELOG.md, and .gitignore; no prewritten editor source.
-  * Bootstrap commands for manual transcription:
-    `unzip bootstrap-oxed.zip`; `git clone ./bootstrap-oxed oxed`;
-    `cd oxed`; `git status --short --branch`.
-  * Host prerequisites on macOS: `brew install opam autoconf pkg-config`.
-    Other host-specific instructions were originally documented for
-    Arch Linux and Ubuntu 24.04; execute only the relevant branch.
-  * Compiler setup: `opam init`; `opam update --all`;
-    `opam switch create oxcaml oxcaml-compiler --repos
-    ox=git+https://github.com/oxcaml/opam-repository.git,default`;
-    `eval "$(opam env --switch=oxcaml --set-switch)"`.
-  * Library setup: `opam install dune ocamlfind base core core_unix
-    zed lambda-term lwt`; defer Tree-sitter and LSP dependencies.
-  * Development rule: type every source line, record the actual
-    compiler diagnostic, fix one contract, rebuild, and commit.
-  * The commands above originated as setup instructions; they were
-    not all independently verified when the seed was created.
-
- -- EAX <info@dst9.org>  Wed, 18 Nov 2026 00:00:00 -0500

@@ -1,97 +1,276 @@
 oxed - SOFTWARE REQUIREMENTS SPECIFICATION
 Document: OXED-SRS-001
-Revision: 0.2-draft
+Revision: 0.3-draft
 Status: DRAFT
-Date: 2026-11-20
+Date: 2026-11-21
 
 1. SCOPE
 
-1.1 oxed is an ed-first terminal editor written in OxCaml.
-1.2 Keyboard, mouse, ed, and LSP edits share one transaction engine.
-1.3 Visual features augment, rather than replace, command composition.
+1.1 oxed is a keyboard-first structural text editor written in OxCaml.
+1.2 Its command language combines ed's economy with Sam's
+    compositional structural regular expressions.
+1.3 The editor operates on Unicode text ranges rather than
+    treating lines as the fundamental editing objects.
+1.4 Numbered output, browsing, and optional mouse interaction
+    augment the command language without replacing it.
+1.5 Tree-sitter and LSP are optional future extensions, not
+    dependencies of the editing core.
 
 2. CONVENTIONS
 
 2.1 MUST, SHOULD, and MAY follow RFC 2119 and RFC 8174.
-2.2 Each REQ identifier is unique and remains stable across revisions.
+2.2 Each REQ identifier is unique and stable across revisions.
 2.3 Every MUST requirement requires verification evidence.
+2.4 Half-open ranges use [start, stop) notation.
+2.5 Requirements describe target behavior unless verified in
+    Section 7.
 
 3. ARCHITECTURE
 
 3.1 Main       Application lifecycle and resource cleanup
-3.2 App        Event routing, dispatch, and rendering
-3.3 Terminal   Lambda-term input, display, and mouse
+3.2 App        Event routing, command input, and rendering
+3.3 Terminal   Lambda-term input and display
 3.4 Workspace  Files, buffers, and active document
-3.5 Editor     Zed-backed text, cursors, selections, and undo
-3.6 Ed         Addressing and command interpretation
-3.7 Syntax     Tree-sitter parsing and syntax overlays
-3.8 Language   LSP processes and language services
+3.5 Editor     Zed-backed Unicode text, cursors, and editing
+3.6 Ed         Sam-style addressing and command interpretation
+3.7 Syntax     Optional syntax parsing and overlays
+3.8 Language   Optional LSP processes and language services
+
+3.9 Ed owns command selection state (dot).
+3.10 Editor owns the authoritative text buffer.
+3.11 Command and visual selections MUST use compatible ranges.
+3.12 Syntax and Language MUST NOT be required for basic editing.
 
 4. FUNCTIONAL REQUIREMENTS
 
-REQ-001 Editor MUST own authoritative text and cursor state.
-REQ-002 All editing inputs MUST use a common transaction pathway.
-REQ-003 Ed MUST support ., $, numbers, marks, searches, and ranges.
-REQ-004 Ed MUST support p, a, i, c, d, s, g, w, q, and u.
-REQ-005 An @ selection address MAY extend traditional ed syntax.
+REQ-001 Editor MUST own authoritative text and editing cursor state.
+
+REQ-002 Editing operations MUST use a common, undoable
+        transaction pathway.
+
+REQ-003 Ed MUST support ., $, absolute and relative line
+        addresses, marks, searches, and compound ranges.
+
+REQ-004 Ed MUST support p, n, a, i, c, d, s, x, y, g, v,
+        w, q, and u.
+
+REQ-005 An optional syntax extension MAY provide @ selection
+        addresses. Such support is not required by the core.
+
 REQ-006 Workspace MUST support opening, editing, and saving files.
-REQ-007 Terminal MUST support keyboard, mouse, and resizing.
+
+REQ-007 Terminal MUST support keyboard input and resizing.
+        Mouse interaction MAY be implemented separately.
+
 REQ-008 Terminal MUST restore its state after normal termination
         and recoverable failures.
-REQ-009 Syntax MUST maintain an incremental, derived parse tree.
-REQ-010 Language MUST support versioned LSP document state.
+
+REQ-009 If a syntax extension is enabled, its parse tree MUST
+        remain derived from the authoritative editor buffer.
+
+REQ-010 If LSP is enabled, Language MUST support versioned
+        document synchronization.
+
 REQ-011 Stale LSP results MUST NOT overwrite newer text state.
-REQ-012 Position conversion MUST handle Unicode scalar positions,
-        UTF-8 byte offsets, and LSP UTF-16 offsets.
+
+REQ-012 Text ranges MUST preserve Unicode scalar boundaries.
+        UTF-8 offsets and, when LSP is enabled, UTF-16 offsets
+        MUST be converted without corrupting buffer positions.
+
 REQ-013 File operations MUST preserve buffer integrity on failure.
+
 REQ-014 Release builds MUST NOT contain reachable TODO stubs.
 
-5. IMPLEMENTATION CONSTRAINTS
+REQ-015 Ed selections MUST be represented as half-open ranges,
+        independently of line-oriented addressing.
 
-5.1 OxCaml with Base, Core, and Core_unix.
-5.2 Zed provides Unicode editing and rope infrastructure.
-5.3 Lambda-term provides terminal interaction.
-5.4 Lwt coordinates asynchronous operations.
-5.5 Tree-sitter provides incremental syntax analysis.
-5.6 LSP protocol types and process transport remain separate.
-5.7 Zed refers to the OCaml library, not the Rust Zed editor.
+REQ-016 Structural expressions MUST support composable regular
+        expression operations over selected text ranges.
 
-6. VERIFICATION
+REQ-017 The n command MUST display source line numbers without
+        external filters or modification of buffer contents.
+
+REQ-018 The command prompt MUST accept Unicode input and MUST
+        distinguish command input from buffer editing.
+
+REQ-019 If mouse support is implemented, it MUST be disabled
+        by default and configurable through :set mouse and
+        :set nomouse.
+
+REQ-020 Invalid addresses MUST NOT modify dot or buffer contents.
+
+REQ-021 Viewport scrolling MUST NOT implicitly change dot.
+
+REQ-022 The editor MUST remain usable without Tree-sitter,
+        language grammars, or an LSP server.
+
+REQ-023 Command parsing MUST distinguish address selection
+        from command execution.
+
+5. COMMAND LANGUAGE
+
+5.1 General
+
+5.1.1 Ed provides the command interpreter.
+5.1.2 The command prompt uses the Greek lambda: λ
+5.1.3 Commands operate on dot unless an explicit address
+      supplies another selection.
+5.1.4 Successful addressed operations update dot according
+      to the command's selection semantics.
+5.1.5 The command language SHOULD preserve Sam's compositional
+      model wherever practical.
+
+5.2 Addresses
+
+.           Current selection (dot)
+$           Empty selection at end-of-file
+0           Beginning-of-file address
+n           Absolute line address, when used as an address
++           Next line relative to dot
+-           Previous line relative to dot
+/re/        Forward regular-expression search
+?re?        Backward regular-expression search
+a,b         Range spanning two addresses
+,           Entire buffer
+
+5.3 Commands
+
+p           Print selected text
+n           Print selected text with source line numbers
+x/re/       Iterate over matching substrings
+y/re/       Iterate over text between matches
+g/re/       Execute when selection matches
+v/re/       Execute when selection does not match
+s/re/t/     Substitute text
+a           Append text
+i           Insert text
+c           Change selection
+d           Delete selection
+u           Undo
+w           Write file
+q           Quit
+
+5.4 Numbered Output
+
+5.4.1 n is a deliberate extension to Sam.
+5.4.2 n MUST display the original source line numbers.
+5.4.3 Numbering MUST NOT alter the underlying text.
+5.4.4 n SHOULD support ordinary addresses, ranges, and
+      structural selections.
+5.4.5 Sam's historical file-listing command n is not retained
+      under that spelling.
+
+5.5 Structural Expressions
+
+5.5.1 x and y MUST operate on matching text ranges.
+5.5.2 Structural commands SHOULD permit nesting.
+5.5.3 Regular expressions remain the primary selection engine.
+5.5.4 No language parser is required for structural editing.
+5.5.5 Compound modifications MUST preserve address validity
+      and MUST NOT partially corrupt the buffer.
+
+5.6 Editor Settings
+
+:set          Display settings
+:set mouse    Enable mouse interaction, when supported
+:set nomouse  Disable mouse interaction, when supported
+
+5.6.1 Settings MUST remain separate from structural commands.
+5.6.2 Unsupported settings MUST report an explicit error.
+5.6.3 Keyboard operation MUST NOT depend on mouse availability.
+
+6. IMPLEMENTATION CONSTRAINTS
+
+6.1 OxCaml with Base, Core, and Core_unix.
+6.2 Zed provides Unicode text editing and rope infrastructure.
+6.3 Lambda-term provides terminal input and rendering.
+6.4 Lwt coordinates asynchronous operations.
+6.5 Ed implements the command parser and range interpreter.
+6.6 Regular-expression selection MUST NOT require Tree-sitter.
+6.7 Tree-sitter and LSP integration are deferred and optional.
+6.8 Zed refers to the OCaml library, not the Rust Zed editor.
+6.9 The editor SHOULD minimize mandatory dependencies.
+6.10 The initial interface MUST remain keyboard-operable.
+
+7. VERIFICATION AND CURRENT STATUS
+
+7.1 VERIFIED
 
 VER-001 Native compilation and interface compatibility.
-VER-002 Terminal acquisition, restoration, and repeated cleanup.
-VER-003 File open, edit, save, and reopen round trips.
-VER-004 Ed command, address, and undo regression tests.
-VER-005 Keyboard, mouse, scrolling, and resize tests.
-VER-006 Incremental syntax parsing and highlighting tests.
-VER-007 LSP synchronization and stale-response tests.
-VER-008 Unicode position-conversion round-trip tests.
-VER-009 Exception, crash, and partial-write recovery tests.
+        PASS: Application skeleton and current modules compile.
 
-7. CURRENT STATUS
+VER-002 Terminal acquisition, restoration, and cleanup.
+        PASS: Normal exit, exception cleanup, and repeated close.
+        macOS PENDIN is normalized in terminal-state tests.
 
-7.1 Application skeleton compiles.
-7.2 VER-002 passed for normal exit, injected exception, and
-    repeated close.
-7.3 Remaining verification items are pending.
+VER-003 File open and Unicode text handling.
+        PARTIAL: File opening, UTF-8 round trip, insertion,
+        cursor movement, and deletion verified.
+        Saving and reopening edited files remain pending.
+
+VER-004 Ed addressing and command regression tests.
+        PARTIAL: Absolute addresses, numbered output, dot,
+        EOF selections, and ranges verified.
+
+VER-010 Unicode command prompt and application lifecycle.
+        PASS: Command submission, prompt cursor positioning,
+        Ctrl-Q exit, and terminal restoration.
+
+7.2 PENDING
+
+VER-005 Keyboard, scrolling, resize, and optional mouse tests.
+VER-006 Optional incremental syntax parsing tests.
+VER-007 Optional LSP synchronization tests.
+VER-008 Unicode coordinate-conversion round-trip tests.
+VER-009 Exception and partial-write recovery tests.
+VER-011 Relative address regression tests.
+VER-012 Structural expression and nested-selection tests.
+VER-013 File save and reopen integrity tests.
+VER-014 Undo and transaction atomicity tests.
+
+7.3 IMPLEMENTATION PROGRESS
+
+7.3.1 Application lifecycle implemented.
+7.3.2 Terminal input and rendering operational.
+7.3.3 Workspace file loading operational.
+7.3.4 Unicode insertion, movement, and deletion operational.
+7.3.5 Unicode command prompt operational.
+7.3.6 Absolute line addresses and numbered output operational.
+7.3.7 Dot implemented as a half-open Unicode range.
+7.3.8 Relative addressing under development.
+7.3.9 Structural regular expressions pending.
+7.3.10 File writing, scrolling, and mouse interaction pending.
 
 8. OPEN DECISIONS
 
-8.1 App event representation and multiplexing.
-8.2 File encoding and position-conversion implementation.
-8.3 Tree-sitter grammar and OxCaml FFI compatibility.
-8.4 LSP process transport and notification scheduling.
-8.5 Ed line addressing versus character selection.
-8.6 OxCaml-specific performance optimizations.
+8.1 Regular-expression implementation and compatibility.
+8.2 Full Sam address grammar and command nesting.
+8.3 Dot behavior after compound structural modifications.
+8.4 Multi-selection representation and transaction ordering.
+8.5 Command output history and viewport scrolling.
+8.6 Source line numbering for substring selections.
+8.7 Unicode width, wrapping, and terminal cell mapping.
+8.8 File encoding and atomic-save behavior.
+8.9 Multi-file selection and navigation commands.
+8.10 Optional mouse interaction and keyboard focus rules.
+8.11 Optional syntax and language-service integration.
+8.12 OxCaml-specific performance optimizations.
 
 9. CHANGE CONTROL
 
-9.1 Record implementation decisions and evidence in CHANGELOG.
-9.2 Add or revise requirements before implementing new behavior.
-9.3 Associate completed requirements with verification results.
+9.1 Git commits provide the implementation development journal.
+9.2 CHANGELOG records releases and user-visible changes.
+9.3 Requirements MUST be revised before intentional changes
+    to specified behavior.
+9.4 Completed requirements MUST reference verification evidence.
+9.5 Requirement identifiers MUST NOT be reused for unrelated
+    behavior.
 
 10. REFERENCES
 
 [1] ISO/IEC/IEEE 29148:2018, Requirements Engineering.
 [2] RFC 2119, Requirement Levels.
 [3] RFC 8174, Clarification of Requirement Keywords.
+[4] Rob Pike, A Tutorial for the Sam Command Language.
+[5] Plan 9 Programmer's Manual, sam(1).
+
