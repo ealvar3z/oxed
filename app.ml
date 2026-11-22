@@ -4,6 +4,8 @@ type t =
   ; commands : Ed.t
   ; syntax : Syntax.t
   ; languages : Language.t
+  ; mutable command : string
+  ; mutable feedback : string
   ; mutable running : bool
   }
 
@@ -14,7 +16,29 @@ type event =
   | Sequence of string
 
 let create ~terminal ~editor ~commands ~syntax ~languages =
-  { terminal; editor; commands; syntax; languages; running = true }
+  { terminal
+  ; editor
+  ; commands
+  ; syntax
+  ; languages
+  ; command = ""
+  ; feedback = ""
+  ; running = true
+  }
+;;
+
+let append_char text ch =
+  let buffer = Buffer.create 4 in
+  Buffer.add_utf_8_uchar buffer ch;
+  text ^ Buffer.contents buffer
+;;
+
+let remove_last text =
+  let text = Zed_string.of_utf8 text in
+  let len = Zed_string.length text in
+  if len = 0
+  then ""
+  else Zed_string.sub ~pos:0 ~len:(len - 1) text |> Zed_string.to_utf8
 ;;
 
 let next_event (app : t) : event Lwt.t =
@@ -38,20 +62,32 @@ let dispatch app = function
          | _ -> false ->
     app.running <- false;
     Lwt.return_unit
+  | Key key when (not key.control) && not key.meta ->
+    (match key.code with
+     | LTerm_key.Char ch -> app.command <- append_char app.command ch
+     | LTerm_key.Backspace -> app.command <- remove_last app.command
+     | LTerm_key.Enter ->
+       app.feedback <- "entered: " ^ app.command;
+       app.command <- ""
+     | LTerm_key.Escape -> app.command <- ""
+     | _ -> ());
+    Lwt.return_unit
   | _ -> Lwt.return_unit
 ;;
 
 let render (app : t) : unit Lwt.t =
   Terminal.render app.terminal (fun ctx ->
     let rows = (LTerm_draw.size ctx).rows in
+
     LTerm_draw.draw_string ctx 0 0 (Zed_string.of_utf8 "oxed");
-    if rows > 1
-    then
-      LTerm_draw.draw_string
-        ctx
-        (rows - 1)
-        0
-        (Zed_string.of_utf8 "Ctrl-Q quit"))
+
+    if rows > 2 then
+      LTerm_draw.draw_string ctx 1 0
+        (Zed_string.of_utf8 app.feedback);
+    
+    if rows > 1 then
+      LTerm_draw.draw_string ctx (rows - 1) 0
+        (Zed_string.of_utf8 ("λ " ^ app.command)))
 ;;
 
 let running (app : t) : bool = app.running
