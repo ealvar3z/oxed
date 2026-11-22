@@ -42,16 +42,35 @@ let run path =
   expect (Editor.position editor = 0) "cursor reset";
 
   let commands = Ed.create editor in 
-  expect
-    (Ed.execute commands ",p" = Ok "λ café")
-    "print entire buffer";
+  (* expect *)
+  (*   (Ed.execute commands ",p" = Ok "λ café") *)
+  (*   "whole-buffer print"; *)
+  let result = Ed.execute commands ",p" in
+
+  (match result with
+   | Ok text -> Printf.printf "actual: Ok %S\n" text
+   | Error err -> Printf.printf "actual: Error %S\n" err);
+
+  expect (result = Ok "λ café") "whole-buffer print";
 
   expect
     (Ed.execute commands ",n" = Ok "1  λ café")
     "numbered output";
+  
+  expect
+    (Ed.execute commands "1n" = Ok "1  λ café")
+    "numbered line";
 
   expect
-    (Ed.execute commands "invalid" = Error "? unknown command")
+    (Ed.execute commands "1,1p" = Ok "λ café")
+    "line range";
+    
+  expect
+    (Ed.execute commands "2p" = Error "? address out of range")
+    "invalid line";
+
+  expect
+    (Ed.execute commands "xyz" = Error "? unknown command")
     "unknown command";
 
   Lwt.return_unit
